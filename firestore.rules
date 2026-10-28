@@ -1,0 +1,168 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Default-Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity Validation Blueprints
+    function isValidVisitor(data) {
+      return data.keys().hasAll([
+        'visitorId',
+        'name',
+        'location',
+        'intentCategory',
+        'intentSummary',
+        'lastMessagePreview',
+        'status',
+        'unreadForOwner',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'visitorId',
+        'name',
+        'location',
+        'intentCategory',
+        'intentSummary',
+        'lastMessagePreview',
+        'status',
+        'unreadForOwner',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.visitorId is string && data.visitorId.size() >= 1 && data.visitorId.size() <= 128 && data.visitorId.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+      data.location is string && data.location.size() >= 1 && data.location.size() <= 120 &&
+      data.intentCategory is string && data.intentCategory.size() >= 1 && data.intentCategory.size() <= 32 &&
+      data.intentCategory in ['ORDER', 'INVESTMENT', 'CHAT', 'COLLABORATION'] &&
+      data.intentSummary is string && data.intentSummary.size() >= 1 && data.intentSummary.size() <= 500 &&
+      data.lastMessagePreview is string && data.lastMessagePreview.size() >= 0 && data.lastMessagePreview.size() <= 500 &&
+      data.status is string && data.status.size() >= 1 && data.status.size() <= 20 &&
+      data.status in ['online', 'active', 'archived'] &&
+      data.unreadForOwner is int && data.unreadForOwner >= 0 && data.unreadForOwner <= 10000 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll([
+        'visitorId',
+        'senderRole',
+        'senderName',
+        'text',
+        'intentCategory',
+        'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'visitorId',
+        'senderRole',
+        'senderName',
+        'text',
+        'intentCategory',
+        'createdAt'
+      ]) &&
+      data.visitorId is string && data.visitorId.size() >= 1 && data.visitorId.size() <= 128 && data.visitorId.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.senderRole is string && data.senderRole.size() >= 1 && data.senderRole.size() <= 20 &&
+      data.senderRole in ['visitor', 'owner'] &&
+      data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 80 &&
+      data.text is string && data.text.size() >= 1 && data.text.size() <= 2000 &&
+      data.intentCategory is string && data.intentCategory.size() >= 1 && data.intentCategory.size() <= 32 &&
+      data.intentCategory in ['ORDER', 'INVESTMENT', 'CHAT', 'COLLABORATION'] &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidPresence(data) {
+      return data.keys().hasAll([
+        'ownerName',
+        'ownerTitle',
+        'statusText',
+        'isOnline',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'ownerName',
+        'ownerTitle',
+        'statusText',
+        'isOnline',
+        'updatedAt'
+      ]) &&
+      data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 80 &&
+      data.ownerTitle is string && data.ownerTitle.size() >= 1 && data.ownerTitle.size() <= 80 &&
+      data.statusText is string && data.statusText.size() >= 1 && data.statusText.size() <= 80 &&
+      data.isOnline is bool &&
+      data.updatedAt is timestamp;
+    }
+
+    // Connection test document
+    match /test/{docId} {
+      allow get: if isValidId(docId);
+      allow list, create, update, delete: if false;
+    }
+
+    // Visitors Collection
+    match /visitors/{visitorId} {
+      allow get, list: if true;
+      allow create: if isValidId(visitorId) &&
+        isValidVisitor(incoming()) &&
+        incoming().visitorId == visitorId;
+      allow update: if isValidId(visitorId) &&
+        isValidVisitor(incoming()) &&
+        incoming().visitorId == existing().visitorId &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name',
+          'location',
+          'intentCategory',
+          'intentSummary',
+          'lastMessagePreview',
+          'status',
+          'unreadForOwner',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    // Messages Collection
+    match /messages/{messageId} {
+      allow get, list: if true;
+      allow create: if isValidId(messageId) &&
+        isValidMessage(incoming()) &&
+        exists(/databases/$(database)/documents/visitors/$(incoming().visitorId));
+      allow update, delete: if false;
+    }
+
+    // Owner Starbase Presence Collection
+    match /presence/{presenceId} {
+      allow get, list: if true;
+      allow create: if isValidId(presenceId) &&
+        presenceId == 'starbase_owner' &&
+        isValidPresence(incoming());
+      allow update: if isValidId(presenceId) &&
+        presenceId == 'starbase_owner' &&
+        isValidPresence(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'ownerName',
+          'ownerTitle',
+          'statusText',
+          'isOnline',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+  }
+}

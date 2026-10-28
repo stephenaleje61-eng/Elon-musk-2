@@ -1,0 +1,196 @@
+{
+  "entities": {
+    "Visitor": {
+      "title": "Visitor",
+      "description": "A live visitor session in Elon Musk Space with location, intent, and latest message metadata.",
+      "type": "object",
+      "properties": {
+        "visitorId": {
+          "type": "string",
+          "description": "Unique identifier for the visitor session.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the visitor or Anonymous.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "location": {
+          "type": "string",
+          "description": "Detected city, region, and country of the visitor.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "intentCategory": {
+          "type": "string",
+          "description": "Primary reason for visiting Elon Musk Space.",
+          "enum": ["ORDER", "INVESTMENT", "CHAT", "COLLABORATION"],
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "intentSummary": {
+          "type": "string",
+          "description": "Brief summary of visitor intent typed on entry.",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "lastMessagePreview": {
+          "type": "string",
+          "description": "Preview text of the most recent message in this thread.",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "status": {
+          "type": "string",
+          "description": "Session status.",
+          "enum": ["online", "active", "archived"],
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "unreadForOwner": {
+          "type": "number",
+          "description": "Count of unread messages for the owner console."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when visitor session started."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when visitor session was last updated."
+        }
+      },
+      "required": [
+        "visitorId",
+        "name",
+        "location",
+        "intentCategory",
+        "intentSummary",
+        "lastMessagePreview",
+        "status",
+        "unreadForOwner",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A real-time chat message between a visitor and Elon Musk (Owner).",
+      "type": "object",
+      "properties": {
+        "visitorId": {
+          "type": "string",
+          "description": "ID of the visitor thread this message belongs to.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "senderRole": {
+          "type": "string",
+          "description": "Role of the message sender.",
+          "enum": ["visitor", "owner"],
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "senderName": {
+          "type": "string",
+          "description": "Display name of the sender.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "text": {
+          "type": "string",
+          "description": "Message body content.",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "intentCategory": {
+          "type": "string",
+          "description": "Intent tag associated with the conversation.",
+          "enum": ["ORDER", "INVESTMENT", "CHAT", "COLLABORATION"],
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the message was sent."
+        }
+      },
+      "required": [
+        "visitorId",
+        "senderRole",
+        "senderName",
+        "text",
+        "intentCategory",
+        "createdAt"
+      ]
+    },
+    "OwnerPresence": {
+      "title": "OwnerPresence",
+      "description": "Live Starbase presence and profile settings for the Owner Console.",
+      "type": "object",
+      "properties": {
+        "ownerName": {
+          "type": "string",
+          "description": "Active owner display name.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "ownerTitle": {
+          "type": "string",
+          "description": "Active owner title and verification badge status.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "statusText": {
+          "type": "string",
+          "description": "Live presence location text (e.g., Online in Starbase).",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "isOnline": {
+          "type": "boolean",
+          "description": "Whether owner is actively online in Starbase."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last presence update."
+        }
+      },
+      "required": [
+        "ownerName",
+        "ownerTitle",
+        "statusText",
+        "isOnline",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/visitors/{visitorId}": {
+      "schema": {
+        "$ref": "#/entities/Visitor"
+      },
+      "description": "Stores live visitor sessions, detected location, intent category, and last message preview."
+    },
+    "/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/Message"
+      },
+      "description": "Stores all real-time 1-on-1 chat messages between visitors and Elon Musk (Owner)."
+    },
+    "/presence/{presenceId}": {
+      "schema": {
+        "$ref": "#/entities/OwnerPresence"
+      },
+      "description": "Stores live Starbase presence and owner profile settings."
+    }
+  }
+}
